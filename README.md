@@ -15,8 +15,8 @@ Since This is still an experimental Repo, the files are unclear for a beginner, 
 Happy Hacking <br/>
 
 Details regarding the experiments will be updated once experiments are done. <br/>
-
-Training is similar to LM_LSTM_CRF except the extra hyper parameters for iterated dilated convolutions need to changed at the lm_lstm_crf file in the models folder.
+**Training**
+Training is similar to LM_LSTM_CRF except the extra hyper parameters for iterated dilated convolutions need to changed at the lm_lstm_crf file in the models folder https://github.com/nikhilrayaprolu/LM-IT-DIL-CNN-CRF/blob/master/model/lm_lstm_crf.py#L40
 
 
 ## Installation
