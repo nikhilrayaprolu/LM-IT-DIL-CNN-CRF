@@ -1,32 +1,23 @@
-# LM-LSTM-CRF 
 
-[![Documentation Status](https://readthedocs.org/projects/lm-lstm-crf/badge/?version=latest)](http://lm-lstm-crf.readthedocs.io/en/latest/?badge=latest)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Insight.io](https://insight.io/repoBadge/github.com/LiyuanLucasLiu/LM-LSTM-CRF)](https://insight.io/github.com/LiyuanLucasLiu/LM-LSTM-CRF)
+# LM-IT-DIL-CNN-CRF
+A Hybrid Experiment Combining LM_LSTM_CRF model with Iterated Dilated Convolutions Model for Named Entity Recognition <br/>
 
-This project provides high-performance character-aware sequence labeling tools, including [Training](#usage), [Evaluation](#evaluation) and [Prediction](#prediction). 
+This Repository heavily borrows code from LM_LSTM_CRF official implementation https://github.com/LiyuanLucasLiu/LM-LSTM-CRF/ and Tensorflow code for Iterated Dilated Convolutions is translated to Pytorch Implementation https://github.com/iesl/dilated-cnn-ner <br/>
 
-Details about LM-LSTM-CRF can be accessed [here](http://arxiv.org/abs/1709.04109), and the implementation is based on the PyTorch library. 
+**TO-DO**
+I felt the loss function used in Iterated Dilated Convolutions are complex and need to understand them well since it has really good regularization terms in overall.<br/>
 
-The documents would be available [here](http://lm-lstm-crf.readthedocs.io/en/latest/).
+Need to Understand the CRF completely, I just used the CRF layer provided by LM_LSTM_CRF <br/>
 
-## Quick Links
+Need to check with multiple hyper parameters for Iterated-Dilated-Convolutions <br/>
 
-- [Model](#model-notes)
-- [Installation](#installation)
-- [Data](#data)
-- [Usage](#usage)
-- [Benchmarks](#benchmarks)
-- [Pretrained model](#pretrained-model)
+Since This is still an experimental Repo, the files are unclear for a beginner, but if you are eager you can explore the lm_lstm_crf.py file in models/ for implementation of iterated Dilated Convolutions in pytorch. <br/>
+Happy Hacking <br/>
 
-## Model Notes
+Details regarding the experiments will be updated once experiments are done. <br/>
 
-<p align="center"><img width="100%" src="docs/framework.png"/></p>
+Training is similar to LM_LSTM_CRF except the extra hyper parameters for iterated dilated convolutions need to changed at the lm_lstm_crf file in the models folder.
 
-As visualized above, we use conditional random field (CRF) to capture label dependencies, and adopt a hierarchical LSTM to leverage both char-level and word-level inputs. 
-The char-level structure is further guided by a language model, while pre-trained word embeddings are leveraged in word-level.
-The language model and the sequence labeling model are trained at the same time, and both make predictions at word-level.
-[Highway networks]("https://arxiv.org/abs/1507.06228") are used to transform the output of char-level LSTM into different semantic spaces, and thus mediating these two tasks and allowing language model to empower sequence labeling.
 
 ## Installation
 
