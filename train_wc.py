@@ -112,7 +112,13 @@ if __name__ == "__main__":
             print('loading embedding')
             if args.fine_tune:  # which means does not do fine-tune
                 f_map = {'<eof>': 0}
-            f_map, embedding_tensor, in_doc_words = utils.load_embedding_wlm(args.emb_file, ' ', f_map, dt_f_set, args.caseless, args.unk, args.word_dim, shrink_to_corpus=args.shrink_embedding)
+            embedding_tensor,in_doc_words = None, None
+            if(os.path.isfile('embedding1')):
+                embeddingsaved = torch.load('embedding1')
+                f_map, embedding_tensor, in_doc_words = embeddingsaved['f_map'],embeddingsaved['embedding_tensor'],embeddingsaved['in_doc_words']
+            else:
+                f_map, embedding_tensor, in_doc_words = utils.load_embedding_wlm(args.emb_file, ' ', f_map, dt_f_set, args.caseless, args.unk, args.word_dim, shrink_to_corpus=args.shrink_embedding)
+                torch.save({'f_map':f_map,'embedding_tensor': embedding_tensor, 'in_doc_words':in_doc_words},'embedding1')
             print("embedding size: '{}'".format(len(f_map)))
 
         l_set = functools.reduce(lambda x, y: x | y, map(lambda t: set(t), dev_labels))
@@ -120,12 +126,23 @@ if __name__ == "__main__":
         for label in l_set:
             if label not in l_map:
                 l_map[label] = len(l_map)
-    
+    datasetsaved = {}
+    dataset, forw_corp, back_corp = None, None, None
+    dev_dataset, forw_dev, back_dev = None, None, None
+    test_dataset, forw_test, back_test = None, None, None
     print('constructing dataset')
+    if(os.path.isfile('dataset')):
+        datasetsaved = torch.load('dataset')
+        dataset = datasetsaved['dataset']
+        dev_dataset = datasetsaved['dev_dataset']
+        test_dataset = datasetsaved['test_dataset']
+    else:
     # construct dataset
-    dataset, forw_corp, back_corp = utils.construct_bucket_mean_vb_wc(train_features, train_labels, l_map, c_map, f_map, args.caseless)
-    dev_dataset, forw_dev, back_dev = utils.construct_bucket_mean_vb_wc(dev_features, dev_labels, l_map, c_map, f_map, args.caseless)
-    test_dataset, forw_test, back_test = utils.construct_bucket_mean_vb_wc(test_features, test_labels, l_map, c_map, f_map, args.caseless)
+        dataset, forw_corp, back_corp = utils.construct_bucket_mean_vb_wc(train_features, train_labels, l_map, c_map, f_map, args.caseless)
+        dev_dataset, forw_dev, back_dev = utils.construct_bucket_mean_vb_wc(dev_features, dev_labels, l_map, c_map, f_map, args.caseless)
+        test_dataset, forw_test, back_test = utils.construct_bucket_mean_vb_wc(test_features, test_labels, l_map, c_map, f_map, args.caseless)
+        torch.save({'dataset': dataset, 'forw_corp': forw_corp, 'back_corp': back_corp,'dev_dataset': dev_dataset, 'forw_dev':forw_dev, 'back_dev': back_dev,'test_dataset': test_dataset, 'forw_test': forw_test, 'back_test': back_test}, 'dataset')
+        
     
     dataset_loader = [torch.utils.data.DataLoader(tup, args.batch_size, shuffle=True, drop_last=False) for tup in dataset]
     dev_dataset_loader = [torch.utils.data.DataLoader(tup, 50, shuffle=False, drop_last=False) for tup in dev_dataset]
@@ -133,7 +150,7 @@ if __name__ == "__main__":
 
     # build model
     print('building model')
-    ner_model = LM_LSTM_CRF(len(l_map), len(c_map), args.char_dim, args.char_hidden, args.char_layers, args.word_dim, args.word_hidden, args.word_layers, len(f_map), args.drop_out, large_CRF=args.small_crf, if_highway=args.high_way, in_doc_words=in_doc_words, highway_layers = args.highway_layers)
+    ner_model = LM_LSTM_CRF(len(l_map), len(c_map), args.char_dim, args.char_hidden, args.char_layers, args.word_dim, args.word_hidden, len(f_map), args.drop_out, large_CRF=args.small_crf, if_highway=args.high_way, in_doc_words=in_doc_words, highway_layers = args.highway_layers)
 
     if args.load_check_point:
         ner_model.load_state_dict(checkpoint_file['state_dict'])
@@ -186,7 +203,9 @@ if __name__ == "__main__":
             f_f, f_p, b_f, b_p, w_f, tg_v, mask_v = packer.repack_vb(f_f, f_p, b_f, b_p, w_f, tg_v, mask_v, len_v)
             ner_model.zero_grad()
             scores = ner_model(f_f, f_p, b_f, b_p, w_f)
-            loss = crit_ner(scores, tg_v, mask_v)
+            loss = 0
+            for score in scores:
+                loss += crit_ner(score, tg_v, mask_v)
             epoch_loss += utils.to_scalar(loss)
             if args.co_train:
                 cf_p = f_p[0:-1, :].contiguous()
