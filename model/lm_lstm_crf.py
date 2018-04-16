@@ -26,7 +26,7 @@ class LM_LSTM_CRF(nn.Module):
         highway_layers: number of highway layers
     """
     
-    def __init__(self, tagset_size, char_size, char_dim, char_hidden_dim, char_rnn_layers, embedding_dim, word_hidden_dim, vocab_size, dropout_ratio, large_CRF=True, if_highway = False, in_doc_words = 2, highway_layers = 1):
+    def __init__(self, tagset_size, char_size, char_dim, char_hidden_dim, char_rnn_layers, embedding_dim, word_hidden_dim, vocab_size, dropout_ratio, repeats, which_loss, large_CRF=True, if_highway = False, in_doc_words = 2, highway_layers = 1, layer_residual = True, block_residual = True):
 
         super(LM_LSTM_CRF, self).__init__()
         self.char_dim = char_dim
@@ -43,8 +43,11 @@ class LM_LSTM_CRF(nn.Module):
         self.padding = [1,2,1]
         self.dilation = [1,2,1]
         self.take_layer = [False, False, True]
-        self.repeats = 2
-        self.which_loss = 'block'
+        self.repeats = int(repeats)
+        self.which_loss = which_loss
+        self.layer_residual = layer_residual
+        self.block_residual = block_residual
+        print(repeats, which_loss, type(which_loss), which_loss, self.which_loss == "block" )
         
         self.char_embeds = nn.Embedding(char_size, char_dim)
         self.forw_char_lstm = nn.LSTM(char_dim, char_hidden_dim, num_layers=char_rnn_layers, bidirectional=False, dropout=dropout_ratio)
@@ -252,15 +255,23 @@ class LM_LSTM_CRF(nn.Module):
             total_output_width = 0
             inner_last_dims = last_dims
             inner_last_output = last_output
+            block_input = last_output
             for layeri, conv in enumerate(self.itdicnn):
                 h = F.relu(conv(inner_last_output))
                 if self.take_layer[layeri]:
                     hidden_outputs.append(h)
                     total_output_width += self.word_hidden_dim
                 inner_last_dims = self.word_hidden_dim
-                inner_last_output = h
+                if self.layer_residual:
+                    inner_last_output = h + inner_last_output
+                else:
+                    inner_last_output = h
+                    
             h_concat = torch.cat(hidden_outputs,-1)
-            last_output = self.dropout(h_concat)
+            if self.block_residual:
+                last_output = self.dropout(h_concat) + block_input
+            else:
+                last_output = self.dropout(h_concat)
             last_dims = total_output_width
 
             block_unflat_scores.append(last_output)
@@ -273,7 +284,7 @@ class LM_LSTM_CRF(nn.Module):
                 final_crf_out.append(crf_out)
             
         else:
-            unflat_scores = self.block_unflat_scores[-1]
+            unflat_scores = block_unflat_scores[-1]
             crf_out = self.crf(unflat_scores.permute(2,0,1))
             crf_out = crf_out.view(self.word_seq_length, self.batch_size, self.tagset_size, self.tagset_size)
             final_crf_out.append(crf_out)

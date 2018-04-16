@@ -57,8 +57,12 @@ if __name__ == "__main__":
     parser.add_argument('--co_train', action='store_true', help='cotrain language model')
     parser.add_argument('--patience', type=int, default=15, help='patience for early stop')
     parser.add_argument('--high_way', action='store_true', help='use highway layers')
+    parser.add_argument('--layer_residual', action='store_true', help='use layer residual layers')
+    parser.add_argument('--block_residual', action='store_true', help='use block residual layers')
     parser.add_argument('--highway_layers', type=int, default=1, help='number of highway layers')
     parser.add_argument('--eva_matrix', choices=['a', 'fa'], default='fa', help='use f1 and accuracy or accuracy alone')
+    parser.add_argument('--which_loss', default="block", help='which type of loss do you want to use block or normal')
+    parser.add_argument('--repeats', type=int, default=1, help='how many repeats should the block in iterated CNN be counted')
     parser.add_argument('--least_iters', type=int, default=50, help='at least train how many epochs before stop')
     parser.add_argument('--shrink_embedding', action='store_true', help='shrink the embedding dictionary to corpus (open this if pre-trained embedding dictionary is too large, but disable this may yield better results on external corpus)')
     args = parser.parse_args()
@@ -98,7 +102,7 @@ if __name__ == "__main__":
 
         # converting format
         train_features, train_labels, f_map, l_map, c_map = utils.generate_corpus_char(lines, if_shrink_c_feature=True, c_thresholds=args.mini_count, if_shrink_w_feature=False)
-        
+
         f_set = {v for v in f_map}
         f_map = utils.shrink_features(f_map, train_features, args.mini_count)
 
@@ -142,15 +146,15 @@ if __name__ == "__main__":
         dev_dataset, forw_dev, back_dev = utils.construct_bucket_mean_vb_wc(dev_features, dev_labels, l_map, c_map, f_map, args.caseless)
         test_dataset, forw_test, back_test = utils.construct_bucket_mean_vb_wc(test_features, test_labels, l_map, c_map, f_map, args.caseless)
         torch.save({'dataset': dataset, 'forw_corp': forw_corp, 'back_corp': back_corp,'dev_dataset': dev_dataset, 'forw_dev':forw_dev, 'back_dev': back_dev,'test_dataset': test_dataset, 'forw_test': forw_test, 'back_test': back_test}, 'dataset')
-        
-    
+
+
     dataset_loader = [torch.utils.data.DataLoader(tup, args.batch_size, shuffle=True, drop_last=False) for tup in dataset]
     dev_dataset_loader = [torch.utils.data.DataLoader(tup, 50, shuffle=False, drop_last=False) for tup in dev_dataset]
     test_dataset_loader = [torch.utils.data.DataLoader(tup, 50, shuffle=False, drop_last=False) for tup in test_dataset]
 
     # build model
     print('building model')
-    ner_model = LM_LSTM_CRF(len(l_map), len(c_map), args.char_dim, args.char_hidden, args.char_layers, args.word_dim, args.word_hidden, len(f_map), args.drop_out, large_CRF=args.small_crf, if_highway=args.high_way, in_doc_words=in_doc_words, highway_layers = args.highway_layers)
+    ner_model = LM_LSTM_CRF(len(l_map), len(c_map), args.char_dim, args.char_hidden, args.char_layers, args.word_dim, args.word_hidden, len(f_map), args.drop_out,args.repeats, args.which_loss, large_CRF=args.small_crf, if_highway=args.high_way, in_doc_words=in_doc_words, highway_layers = args.highway_layers, layer_residual = args.layer_residual, block_residual = args.block_residual)
 
     if args.load_check_point:
         ner_model.load_state_dict(checkpoint_file['state_dict'])
@@ -280,7 +284,7 @@ if __name__ == "__main__":
             if dev_acc > best_acc:
                 patience_count = 0
                 best_acc = dev_acc
-                
+
                 test_acc = evaluator.calc_score(ner_model, test_dataset_loader)
 
                 track_list.append(
