@@ -207,6 +207,7 @@ class eval_wc(eval_batch):
             f_f, f_p, b_f, b_p, w_f, _, mask_v = self.packer.repack_vb(f_f, f_p, b_f, b_p, w_f, tg, mask_v, len_v)
             scores = ner_model(f_f, f_p, b_f, b_p, w_f)
             score = scores[-1]
+            #print(score.data.size(), mask_v.data.size())
             decoded = self.decoder.decode(score.data, mask_v.data)
             self.eval_b(decoded, tg)
 

@@ -274,6 +274,7 @@ class predict_wc(predict):
             mask_v = masks.transpose(0, 1)
 
         scores = ner_model(f_f, f_p, b_f, b_p, w_f)
-        decoded = self.decoder.decode(scores.data, mask_v)
+        score = scores[-1]
+        decoded = self.decoder.decode(score.data, mask_v)
 
         return decoded

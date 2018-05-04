@@ -53,8 +53,7 @@ if __name__ == "__main__":
 
     # build model
     print('loading model')
-    ner_model = LM_LSTM_CRF(len(l_map), len(c_map), jd['char_dim'], jd['char_hidden'], jd['char_layers'], jd['word_dim'], jd['word_hidden'], jd['word_layers'], len(f_map), jd['drop_out'], large_CRF=jd['small_crf'], if_highway=jd['high_way'], in_doc_words=in_doc_words, highway_layers = jd['highway_layers'])
-
+    ner_model = LM_LSTM_CRF(len(l_map), len(c_map), jd['char_dim'], jd['char_hidden'], jd['char_layers'], jd['word_dim'], jd['word_hidden'], len(f_map), jd['drop_out'],jd['repeats'], jd['which_loss'], large_CRF=jd['small_crf'], if_highway=jd['high_way'], in_doc_words=in_doc_words, highway_layers = jd['highway_layers'],layer_residual = jd['layer_residual'], block_residual = jd['block_residual'])
     ner_model.load_state_dict(checkpoint_file['state_dict'])
 
     if args.gpu >= 0:
